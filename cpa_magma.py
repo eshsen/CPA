@@ -1,7 +1,20 @@
 import numpy as np
-data = np.load("captured_data.npz")
-trace_array = data["trace_array"]
-textin_array = data["textin_array"]
+import zipfile
+import os
+import shutil
+trace_zip_filename = 'trace_array.zip'
+textin_zip_filename = 'textin_array.zip'
+temp_dir = 'extracted_data'
+os.makedirs(temp_dir, exist_ok=True)
+with zipfile.ZipFile(trace_zip_filename, 'r') as zip_ref:
+    zip_ref.extract('trace_array.npy', path=temp_dir)
+with zipfile.ZipFile(textin_zip_filename, 'r') as zip_ref:
+    zip_ref.extract('textin_array.npy', path=temp_dir)
+trace_array = np.load(os.path.join(temp_dir, 'trace_array.npy'))
+textin_array = np.load(os.path.join(temp_dir, 'textin_array.npy'))
+shutil.rmtree(temp_dir)
+
+
 SBOXES = [[12, 4, 6, 2, 10, 5, 11, 9, 14, 8, 13, 7, 0, 3, 15, 1],
         [6, 8, 2, 3, 9, 10, 5, 12, 1, 14, 4, 7, 11, 13, 0, 15],
         [11, 3, 5, 8, 2, 15, 10, 13, 14, 1, 7, 4, 12, 9, 6, 0],
