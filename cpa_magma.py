@@ -26,29 +26,24 @@ SBOXES = [[12, 4, 6, 2, 10, 5, 11, 9, 14, 8, 13, 7, 0, 3, 15, 1],
 
 def apply_sbox(s, _in):
     return (
-        (s[0][(_in >> 28) & 0x0F] << 0) +
-        (s[1][(_in >> 24) & 0x0F] << 4) +
-        (s[2][(_in >> 20) & 0x0F] << 8) +
-        (s[3][(_in >> 16) & 0x0F] << 12) +
-        (s[4][(_in >> 12) & 0x0F] << 16) +
-        (s[5][(_in >> 8) & 0x0F] << 20) +
-        (s[6][(_in >> 4) & 0x0F] << 24) +
-        (s[7][(_in >> 0) & 0x0F] << 28)
+    (s[0][(_in >> 0) & 0x0F] << 0) +
+    (s[1][(_in >> 4) & 0x0F] << 4) +
+    (s[2][(_in >> 8) & 0x0F] << 8) +
+    (s[3][(_in >> 12) & 0x0F] << 12) +
+    (s[4][(_in >> 16) & 0x0F] << 16) +
+    (s[5][(_in >> 20) & 0x0F] << 20) +
+    (s[6][(_in >> 24) & 0x0F] << 24) +
+    (s[7][(_in >> 28) & 0x0F] << 28)
     )
 
 def bytes_to_int(inputdata):
     data = bytearray(inputdata)
-    return int.from_bytes(data[0:4], byteorder='big'), int.from_bytes(data[4:8], byteorder='big')
+    return int.from_bytes(data[0:4][::-1], byteorder='big'), int.from_bytes(data[4:8][::-1], byteorder='big')
+
 
 def modular_add(x, y, mod=2 ** 32):
-    carry = 0
-    for i in range(4):
-        byte_x = (x >> (i * 8)) & 0xFF
-        byte_y = (y >> (i * 8)) & 0xFF
-        sum_byte = (byte_x + byte_y + carry) & 0xFF
-        carry = (byte_x + byte_y + carry) >> 8
-        x = (x & ~(0xFF << (i * 8))) | (sum_byte << (i * 8))
-    return x
+    res = x + int(y)
+    return res if res < mod else res - mod
 
 def shift_left_11(x):
     return ((x << 11) & (2 ** 32 - 1)) | (x >> (32 - 11))
@@ -99,7 +94,7 @@ for rnum in range(8):
     bestround = 0
     for tnum_r in range(numt):
         round_data[tnum_r][rnum] = feistel(bestguess, textin_array[tnum_r], rnum)
-    for bnum in range(4):
+    for bnum in reversed(range(4)):
         cpaoutput = np.zeros(256)
         maxcpa = np.zeros(256)
         for kguess in range(256):
@@ -111,13 +106,11 @@ for rnum in range(8):
             cpaoutput = correlation / (o_t * o_hws)
             maxcpa[kguess] = max(abs(cpaoutput))
         bestround = bestround | (np.argmax(maxcpa) << (bnum * 8))
-        bestguess[bnum + rnum * 4] = np.argmax(maxcpa)
+        bestguess[((rnum + 1) * 4) - bnum - 1] = np.argmax(maxcpa)
         for b in bestguess: print("%02x " % b, end="")
         print("/n")
-        cparefs[bnum + rnum * 4] = max(maxcpa)
+        cparefs[((rnum + 1) * 4) - bnum - 1] = max(maxcpa)
         for tnum_r in range(numt):
             round_data[tnum_r][rnum] = feistel(bestguess, textin_array[tnum_r], rnum)
-
 print("Best Key Guess: ", end="")
 for b in bestguess: print("%02x " % b, end="")
-print("\n", cparefs)
